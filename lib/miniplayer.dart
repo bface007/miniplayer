@@ -53,6 +53,9 @@ class Miniplayer extends StatefulWidget {
   ///Used to set the color of the background box shadow
   final Color backgroundBoxShadow;
 
+  final Function(double minHeight, double currentHeight, PanelState state)?
+      canDismiss;
+
   const Miniplayer({
     Key? key,
     required this.minHeight,
@@ -67,6 +70,7 @@ class Miniplayer extends StatefulWidget {
     this.onDismissed,
     this.controller,
     this.backgroundBoxShadow = Colors.black45,
+    this.canDismiss,
   }) : super(key: key);
 
   @override
@@ -92,6 +96,8 @@ class _MiniplayerState extends State<Miniplayer> with TickerProviderStateMixin {
 
   ///Counts how many updates were required for a distance (onPanUpdate) -> necessary to calculate the drag speed
   int updateCount = 0;
+
+  late PanelState _panelState;
 
   StreamController<double> _heightController =
       StreamController<double>.broadcast();
@@ -125,6 +131,8 @@ class _MiniplayerState extends State<Miniplayer> with TickerProviderStateMixin {
 
     _dragHeight = heightNotifier.value;
 
+    _panelState = PanelState.MIN;
+
     if (widget.controller != null) {
       widget.controller!.addListener(controllerListener);
     }
@@ -157,7 +165,7 @@ class _MiniplayerState extends State<Miniplayer> with TickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     if (dismissed) {
-      return Container();
+      return const SizedBox.shrink();
     }
 
     return MiniplayerWillPopScope(
@@ -320,7 +328,9 @@ class _MiniplayerState extends State<Miniplayer> with TickerProviderStateMixin {
     }
 
     ///Drag below minHeight
-    else if (onDismissed != null) {
+    else if (onDismissed != null &&
+        (widget.canDismiss?.call(widget.minHeight, _dragHeight, _panelState) ??
+            true)) {
       final percentageDown = borderDouble(
           minRange: 0.0,
           maxRange: 1.0,
@@ -342,6 +352,7 @@ class _MiniplayerState extends State<Miniplayer> with TickerProviderStateMixin {
 
   ///Animates the panel height according to a SnapPoint
   void _snapToPosition(PanelState snapPosition) {
+    _panelState = snapPosition;
     switch (snapPosition) {
       case PanelState.MAX:
         _animateToHeight(widget.maxHeight);
